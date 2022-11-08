@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+
+<body>
+  <div>
+    <input id="root" type="text" placeholder="http://localhost" value="http://localhost">
+  </div>
+
+  <div>
+    <h2>Sign in</h2>
+    <button id="buttonConnect" onclick="connectTronweb()">Can you get tronweb from tronlink?</button>
+    <p id="addressWallet"></p>
+    <button id="buttonSign" onclick="signIn()">Sign in</button>
+  </div>
+
+  <div>
+    <h2>Import cards</h2>
+    <input type="file" id="inputCards">
+    <button id="importCards" onclick="importCards()">Import Cards</button>
+  </div>
+
+  <div>
+    <h2>Code to signedMsg</h2>
+    <input type="text" id="signedMsgText"></input>
+    <button id="signedMsgButton" onclick="getSignMessage()">get signedMsg</button>
+    <p id="signedMsgButtonResult">signedMsg: </p>
+  </div>
+
+</body>
+
+<script>
+
+  async function getFile(file) {
+    console.log(file);
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onloadend = (e) => {
+        const error = e.target.error;
+        if (error != null) {
+          console.log(error);
+          switch (error.code) {
+            case error.ENCODING_ERR:
+              console.error("Проблемы кодировки!");
+              break;
+
+            case error.NOT_FOUND_ERR:
+              console.error("Файл не найден!");
+              break;
+
+            case error.NOT_READABLE_ERR:
+              console.error("Файл не может быть прочитан!");
+              break;
+
+            case error.SECURITY_ERR:
+              console.error("Проблема безопасности в файл!");
+              break;
+
+            default:
+              console.error("Я понятия не имею, что случилось!");
+          }
+        }
+      }
+      fr.onload = (e) => {
+        resolve(e.target.result);
+        delete fr;
+      }
+      fr.onprogress = function (event) {
+        console.log('total: ', event.total);
+        console.log('loaded: ', event.loaded);
+      };
+
+      fr.readAsText(file);
+    });
+  }
+
+  async function importCards() {
+    const root = document.getElementById('root').value;
+    const files = document.getElementById('inputCards').files;
+    if (files.length) {
+      const cards = JSON.parse(await getFile(files[0]));
+
+      async function loadCard(cardIndex) {
+        const card = cards[cardIndex];
+        const cardJson = JSON.stringify(card);
+
+        let response;
+        try {
+          await fetch(`${root}/api/marketplace/import`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              cardJson,
+              password: 'password'
+            }),
+          }).catch(() => {
+            throw `Card error: ${card.cardId}`;
+          });
+
+          return card.cardId;
+        }
+        catch (e) {
+          console.log(`Card loaded: ${card.cardId}`);
+          return loadCard(cardIndex);
+        }
+      }
+
+      for (const cardIndex in cards) {
+        loadCard(cardIndex).then((cardId) => {
+          console.log(`Card loaded: ${cardId}`);
+        });
+        // const card = cards[cardIndex];
+        // const cardJson = JSON.stringify(card);
+
+        // const response = await
+        //   fetch(`${root}/api/marketplace/import`, {
+        //     method: 'POST',
+        //     headers: {
+        //       'Accept': 'application/json',
+        //       'Content-Type': 'application/json'
+        //     },
+        //     body: JSON.stringify({
+        //       cardJson,
+        //       password: 'password'
+        //     }),
+        //   });
+
+        // if (response.ok) {
+        //   console.log(`Card loaded: ${card.cardId}`);
+        // } else {
+        //   console.log(`Card error: ${card.cardId}`);
+        // }
+      }
+    }
+
+    return 'cards loaded';
+  }
+
+  async function getTronweb() {
+    if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
+      return window.tronWeb.defaultAddress.base58;
+    }
+    return '';
+  }
+
+  async function getSignMessage() {
+    const text = document.getElementById('signedMsgText').value;
+    const signedMsg = await signMessage(text);
+    console.log(`{
+  "tronWalletAddress": "${window.tronWeb.defaultAddress.base58}",
+  "signedMsg": "${signedMsg}"
+}
+`);
+    document.getElementById('signedMsgButtonResult').innerText = 'signedMsg: ' + signedMsg;
+  }
+
+  async function connectTronweb() {
+    const requestAccountsResponse = await tronLink.request({ method: 'tron_requestAccounts' });
+
+    console.log(requestAccountsResponse.message);
+    switch (requestAccountsResponse.code) {
+      case 200: { console.log('User acceptance of authorization'); break; }
+      case 4000: { console.log('In the queue, no need to duplicate commits'); return; }
+      case 4001: { console.log('User refusal to authorize'); return; }
+    }
+
+    getTronweb();
+  }
+
+  function hashMessage(str) {
+    // convert to hex format and remove the beginning "0x"
+    const hexStrWithout0x = window.tronWeb.toHex(str).replace(/^0x/, '');
+    // conert hex string to byte array
+    const byteArray = window.tronWeb.utils.code.hexStr2byteArray(hexStrWithout0x)
+    // keccak256 computing, then remove "0x" 
+    const strHash = window.tronWeb.sha3(byteArray).replace(/^0x/, '');
+    return strHash;
+  }
+
+  async function signMessage(str) {
+    const strHash = hashMessage(str);
+    const signedStr = await window.tronWeb.trx.sign(strHash);
+    const tail = signedStr.substring(128, 130);
+    if (tail == '01') {
+      signedStr = signedStr.substring(0, 128) + '1c';
+    }
+    else if (tail == '00') {
+      signedStr = signedStr.substring(0, 128) + '1b';
+    }
+    return signedStr;
+  }
+
+  async function signIn(tronWalletAddress = window.tronWeb.defaultAddress.base58) {
+    const root = document.getElementById('root').value;
+    console.log(tronWalletAddress);
+    const responseAuth = await fetch(`${root}:3000/api/auth/sign-in`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tronWalletAddress
+      })
+    });
+    const msg = String(await responseAuth.json());
+    console.log('msg', msg);
+
+    const signedMsg = await signMessage(msg);//await window.tronWeb.trx.sign(msg);
+    console.log('signedMsg', signedMsg);
+
+    const responseCheck = await fetch(`${root}:3000/api/auth/check-sign`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tronWalletAddress,
+        signedMsg
+      })
+    });
+
+    const token = await responseCheck.text();
+    console.log(token);
+
+    return token;
+  }
+
+  window.onload = function () {
+    setTimeout(async () => {
+      const addressWallet = await getTronweb();
+      if (addressWallet) {
+        document.getElementById('buttonConnect').remove();
+        document.getElementById('addressWallet').innerHTML = `<i>Address Wallet</i>: ${addressWallet}`;
+      }
+    }, 500);
+  }
+</script>
+
+</html>

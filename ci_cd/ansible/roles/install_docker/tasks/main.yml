@@ -1,0 +1,117 @@
+---
+# tasks file for install docker
+
+# - name: "Set facts"
+#   package_facts:
+#     manager: "auto"
+#   when: ( ansible_facts['distribution'] == "Amazon" or
+#           ansible_facts['distribution'] == "CentOS" )
+
+- name: Update all packages
+  yum:
+    name: '*'
+    state: latest
+    update_only: yes
+  when: ( ansible_facts['distribution'] == "Amazon" or
+          ansible_facts['distribution'] == "CentOS" )
+
+
+- name: Enable Some packages from amazon-linux-extras packages
+  shell: "amazon-linux-extras install docker -y"
+  notify:
+    - Add user to docker group
+    - Enable Docker and startup
+  when: ansible_facts['distribution'] == "Amazon"
+
+
+- name: Ensure a list of yum packages are installed
+  yum:
+    name: docker
+    state: present
+  notify:
+    - Add user to docker group
+    - Enable Docker and startup
+  when:
+    - ( ansible_facts['distribution'] == "CentOS" or
+        ansible_facts['distribution'] == "Amazon" )
+
+#############################################################################
+###
+###                    Debian and Ubuntu
+###
+#############################################################################
+- name: Update apt cache
+  apt: update_cache=yes cache_valid_time=3600
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+
+- name: Upgrade all apt packages
+  apt: upgrade=dist
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+
+- name: install dependency
+  apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg-agent
+    - software-properties-common
+    - gnupg2
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+    # - ( "'apt-transport-https' not in ansible_facts.packages" or
+    #     "'ca-certificates' not in ansible_facts.packages" or
+    #     "'curl' not in ansible_facts.packages" or
+    #     "'gnupg2' not in ansible_facts.packages" or
+    #     "'software-properties-common' not in ansible_facts.packages" or
+    #     "'gnupg-agent' not in ansible_facts.packages" )
+
+- name: Add an apt signing key Debian for Docker
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+  when: ansible_facts['distribution'] == "Debian"
+
+- name: Add an apt signing key Ubuntu for Docker
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  when: ansible_facts['distribution'] == "Ubuntu"
+
+
+- name: add docker repository to apt Debian
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release | lower }} stable"
+    state: present
+  when: ansible_facts['distribution'] == "Debian"
+
+- name: add docker repository to apt Ubuntu
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable"
+    state: present
+  when: ansible_facts['distribution'] == "Ubuntu"
+
+- name: install docker
+  apt:
+    name: "{{item}}"
+    state: latest
+    update_cache: yes
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+  notify:
+    - Add user to docker group
+    - Enable Docker and startup
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+

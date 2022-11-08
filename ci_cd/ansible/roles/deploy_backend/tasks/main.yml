@@ -1,0 +1,60 @@
+---
+# tasks file for deploy_backend
+
+- name: Down old compose
+  docker_compose:
+    project_src: '/opt/{{ project_name }}'
+    state: absent
+  ignore_errors: yes
+
+- name: Clean up docker_prune
+  docker_prune:
+    containers: yes
+    images: yes
+    networks: yes
+    volumes: yes
+    builder_cache: yes
+
+
+- name: Login to private docker registry
+  docker_login:
+    registry: '{{ registry_host }}'
+    username: gitlab-ci-token
+    password: '{{ ci_job_token }}'
+    reauthorize: yes
+
+
+- name: Pull new images
+  docker_image:
+    repository: '{{ registry_host }}'
+    name: '{{ item }}'
+    tag: '{{ target }}'
+    source: pull
+    force_source: yes
+  loop:
+  - '{{ img_name_for_build }}'
+
+
+- name: Create project directory if it does not exist
+  file:
+    path: '/opt/{{ project_name }}'
+    state: directory
+
+
+- name: Copy .env.{{ target  }} file
+  copy:
+    src: '.env.{{ target }}'
+    dest: '/opt/{{ project_name }}/'
+
+
+- name: Copy new compose to instance
+  template:
+    src: 'docker-compose.yml.j2'
+    dest: '/opt/{{ project_name }}/docker-compose.yml'
+
+
+- name: Up new compose
+  docker_compose:
+    project_src: '/opt/{{ project_name }}'
+    build: no
+    restarted: yes

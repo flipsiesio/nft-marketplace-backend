@@ -1,0 +1,28 @@
+---
+# vars file for deploy_backend
+timeout: 10
+migrations_bin_script_version: "v4.15.0"
+
+image_postgres: postgres:13-alpine
+image_envoy: envoyproxy/envoy-alpine:v1.21.0
+image_redis: redis:6.2.5-alpine
+image_nats: nats:2
+image_centrifugo: centrifugo/centrifugo:v2.8
+image_jaeger_collector: kostyarin/jaeger-collector-influxdb:0139d61
+image_jaeger_query: kostyarin/jaeger-query-influxdb:0139d61
+image_minio: minio/minio:RELEASE.2022-01-08T03-11-54Z
+
+
+POSTGRES_DATABASE: poker-marketplace-backend
+POSTGRES_HOST: postgres
+POSTGRES_PORT: 5432
+POSTGRES_USERNAME: postgres
+POSTGRES_PASSWORD: test
+
+
+services_for_compose: {
+    "auth":         "3000",
+    "marketplace":  "3001",
+    "cards-cli":    "3002",
+    "jackpot":      "3003"
+}

@@ -1,0 +1,86 @@
+version: '3.8'
+services:
+  postgres:
+    image: {{ image_postgres }}
+    container_name: postgres
+    volumes:
+      - /opt/{{ project_name }}/postgres:/var/lib/postgresql:rw,z
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER={{ POSTGRES_USERNAME }}
+      - POSTGRES_PASSWORD={{ POSTGRES_PASSWORD }}
+      - POSTGRES_EXTERNAL_PORT={{ POSTGRES_PORT }}
+      - POSTGRES_DB={{ POSTGRES_DATABASE }}
+    restart: always
+
+  redis:
+    container_name: redis
+    image: {{ image_redis }}
+    volumes:
+      - redis:/data
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data_container:/data/db
+
+{% for service_name, service_port in services_for_compose.items() %}
+  {{ service_name }}:
+    image: '{{ img_name_for_build }}:{{ target }}'
+    container_name: {{ service_name }}
+    env_file:
+      - .env.{{ target }}
+    command: sh -c "node /app/dist/apps/{{ service_name }}/main.js"
+{% if service_port %}
+    ports:
+      - '{{ service_port }}:{{ service_port }}'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ service_name }}.entrypoints=websecure"
+      - "traefik.http.routers.{{ service_name }}.rule=Host(`{{ service_name }}.nft.sfxdx.com`)"
+      - "traefik.http.routers.{{ service_name }}.service={{ service_name }}"
+      - "traefik.http.services.{{ service_name }}.loadbalancer.server.port={{ service_port }}"
+{% endif %}
+    depends_on:
+      - postgres
+      - redis
+      - mongodb
+      - api-gateway
+    restart: on-failure
+{% endfor %}
+
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=devops@sfxdx.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./certs:/letsencrypt
+    restart: always
+
+volumes:
+  redis:
+  mongodb_data_container:

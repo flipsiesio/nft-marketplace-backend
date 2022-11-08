@@ -1,0 +1,8 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: yes
+  roles:
+  # - install_docker
+  # - install_docker-compose
+  - deploy_backend

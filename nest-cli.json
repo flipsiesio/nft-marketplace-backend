@@ -1,0 +1,114 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/marketplace/src",
+  "monorepo": true,
+  "root": "apps/marketplace",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/marketplace/tsconfig.app.json",
+    "plugins": [
+      "@nestjs/swagger"
+    ]
+  },
+  "projects": {
+    "marketplace": {
+      "type": "application",
+      "root": "apps/marketplace",
+      "entryFile": "main",
+      "sourceRoot": "apps/marketplace/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/marketplace/tsconfig.app.json"
+      }
+    },
+    "auth": {
+      "type": "application",
+      "root": "apps/auth",
+      "entryFile": "main",
+      "sourceRoot": "apps/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth/tsconfig.app.json"
+      }
+    },
+    "accounts": {
+      "type": "application",
+      "root": "apps/accounts",
+      "entryFile": "main",
+      "sourceRoot": "apps/accounts/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/accounts/tsconfig.app.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    },
+    "domain": {
+      "type": "library",
+      "root": "libs/domain",
+      "entryFile": "index",
+      "sourceRoot": "libs/domain/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/domain/tsconfig.lib.json"
+      }
+    },
+    "config": {
+      "type": "library",
+      "root": "libs/config",
+      "entryFile": "index",
+      "sourceRoot": "libs/config/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/config/tsconfig.lib.json"
+      }
+    },
+    "contracts": {
+      "type": "library",
+      "root": "libs/contracts",
+      "entryFile": "index",
+      "sourceRoot": "libs/contracts/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/contracts/tsconfig.lib.json"
+      }
+    },
+    "cards-cli": {
+      "type": "application",
+      "root": "apps/cards-cli",
+      "entryFile": "main",
+      "sourceRoot": "apps/cards-cli/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/cards-cli/tsconfig.app.json"
+      }
+    },
+    "jackpot": {
+      "type": "application",
+      "root": "apps/jackpot",
+      "entryFile": "main",
+      "sourceRoot": "apps/jackpot/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/jackpot/tsconfig.app.json"
+      }
+    },
+    "fslog": {
+      "type": "library",
+      "root": "libs/fslog",
+      "entryFile": "index",
+      "sourceRoot": "libs/fslog/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/fslog/tsconfig.lib.json"
+      }
+    },
+    "blockchain": {
+      "type": "library",
+      "root": "libs/blockchain",
+      "entryFile": "index",
+      "sourceRoot": "libs/blockchain/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/blockchain/tsconfig.lib.json"
+      }
+    }
+  }
+}

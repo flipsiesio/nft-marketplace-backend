@@ -1,0 +1,116 @@
+version: '3.2'
+
+services:
+  auth-service:
+    container_name: ${AUTH_SERVICE_CONTAINER_NAME}
+    image: node:18-alpine
+    tty: true
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+    command: yarn run start:dev ${AUTH_SERVICE_CONTAINER_NAME}
+    working_dir: /app
+    restart: always
+    ports:
+      - ${AUTH_SERVICE_HTTP_PORT}:${AUTH_SERVICE_HTTP_PORT}
+    env_file:
+      - .env.develop
+
+  cards-cli:
+    container_name: ${CARDS_CLI_CONTAINER_NAME}
+    image: node:18-alpine
+    tty: true
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+    command: yarn run start:dev ${CARDS_CLI_CONTAINER_NAME}
+    working_dir: /app
+    restart: always
+    ports:
+      - '4001:4001'
+      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:8081:8081'
+      - '127.0.0.1:5001:5001'
+      - ${CARDS_CLI_HTTP_PORT}:${CARDS_CLI_HTTP_PORT}
+    env_file:
+      - .env.develop
+
+  markerplace-service:
+    container_name: ${MARKETPLACE_SERVICE_CONTAINER_NAME}
+    image: node:18-alpine
+    tty: true
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+    command: yarn run start ${MARKETPLACE_SERVICE_CONTAINER_NAME}
+    working_dir: /app
+    restart: always
+    ports:
+      - ${MARKETPLACE_SERVICE_HTTP_PORT}:${MARKETPLACE_SERVICE_HTTP_PORT}
+    env_file:
+      - .env.develop
+
+  jackpot-service:
+    container_name: ${JACKPOT_SERVICE_CONTAINER_NAME}
+    image: node:18-alpine
+    tty: true
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+    command: yarn run start ${JACKPOT_SERVICE_CONTAINER_NAME}
+    working_dir: /app
+    restart: always
+    ports:
+      - ${JACKPOT_SERVICE_HTTP_PORT}:${JACKPOT_SERVICE_HTTP_PORT}
+    env_file:
+      - .env.develop
+
+  redis:
+    container_name: redis-pocker
+    image: redis
+    volumes:
+      - redis:/data
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+    logging:
+      driver: none
+
+  postgres:
+    image: postgres:13-alpine
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql:rw,z
+    expose:
+      - 5432
+    ports:
+      - '${POSTGRES_PORT}:5432'
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_EXTERNAL_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    logging:
+      driver: none
+
+  mongodb:
+    image: mongo:4.4.7-focal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 27017:27017
+    volumes:
+      - ./volumes/mongodb_data:/data/db
+    logging:
+      driver: none
+
+volumes:
+  redis:
+  mongodb_data_container:

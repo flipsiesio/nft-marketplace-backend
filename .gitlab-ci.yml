@@ -1,0 +1,145 @@
+---
+stages:
+  - build
+  - prepare_host
+  - deploy
+  - logs
+
+
+variables:
+  FF_USE_FASTZIP: "true"
+  ARTIFACT_COMPRESSION_LEVEL: fastest # can also be set to fastest, fast, slow and slowest.
+  CACHE_COMPRESSION_LEVEL: fast
+  TRANSFER_METER_FREQUENCY: 1s
+  GIT_DEPTH: 1
+
+
+  image_ansible: cytopia/ansible:latest-tools
+  registry_host: registry.git.sfxdx.ru
+  target: $CI_COMMIT_REF_NAME
+  ansible_host: $host_for_$target
+
+  services_for_build: "auth marketplace cards-cli jackpot"
+  containers_for_logs: "auth marketplace cards-cli jackpot postgres redis"
+ 
+
+.deploy_prepare:
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+  before_script: 
+    - eval `ssh-agent -s`
+    - echo -n "$SSH_PRIVATE_KEY" | ssh-add -
+
+
+.prepare_host:
+  stage: prepare_host
+  image: $image_ansible
+  script: >
+    ansible-playbook -i ci_cd/ansible/inventory/hosts-develop.yml ci_cd/ansible/prepare_host.yml -l $target
+  tags: 
+    - deploy
+
+.build_backend:
+  stage: build
+  script: |
+    set -eux
+    echo "Build backend"
+    docker build -f ci_cd/backend.Dockerfile . -t $CI_REGISTRY_IMAGE:$target --build-arg SERVICES="$services_for_build"
+    docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $registry_host
+    docker push $CI_REGISTRY_IMAGE:$target
+  tags: 
+    - build
+
+
+.deploy:
+  stage: deploy
+  image: $image_ansible
+  script: >
+    ansible-playbook -i ci_cd/ansible/inventory/hosts-develop.yml ci_cd/ansible/deploy.yml -l $target
+    -e "img_name_for_build='$CI_REGISTRY_IMAGE'"
+    -e "ci_job_token='$CI_JOB_TOKEN'"
+    -e "registry_host='$registry_host'"
+    -e "services_for_build='$services_for_build'"
+    -e "project_name='$CI_PROJECT_NAME'"
+    -e "target='$target'"
+  tags:
+    - deploy
+
+
+### ---------------- GET LOGS -------------------- ###
+
+.get_logs:
+  stage: logs
+  image: $image_ansible
+  script:
+    - mkdir -p ci_cd/logs
+    - ansible-playbook -i ci_cd/ansible/inventory/hosts-develop.yml ci_cd/ansible/fetch_log.yml -l $target
+      -e "containers_for_logs='$containers_for_logs'"
+      -e "project_name='$CI_PROJECT_NAME'"
+  artifacts:
+    paths: ["ci_cd/logs/*"]
+    expire_in: 3 week
+  tags: 
+    - deploy
+
+### ---------------- END GET LOGS ---------------- ###
+
+### ---------------- BUILD ----------------------- ###
+
+build:
+  extends:
+    - .build_backend
+  dependencies: []
+  only:
+    - develop
+    - stage
+    - main
+  #when: manual
+
+### ---------------- END BUILD ------------------- ###
+
+### ---------------- PREPARE HOST----------------- ###
+
+prepare_host:
+  extends:
+    - .deploy_prepare
+    - .prepare_host
+  dependencies: []
+  only:
+    - develop
+    - stage
+    - main
+  when: manual
+
+### ---------------- END PREPARE HOST ------------ ###
+
+### ---------------- DEPLOY ---------------------- ###
+
+deploy:
+  extends:
+    - .deploy_prepare
+    - .deploy
+  dependencies: []
+  only:
+    - develop
+    - stage
+    - main
+
+### ---------------- END DEPLOY -------------------- ###
+
+### ---------------- GET LOGS ---------------------- ###
+
+get_logs:
+  extends:
+    - .deploy_prepare
+    - .get_logs
+  dependencies:
+    - deploy
+  only:
+    - develop
+    - stage
+    - main
+  allow_failure: true
+  when: manual
+
+### ---------------- END GET LOGS ------------------ ###

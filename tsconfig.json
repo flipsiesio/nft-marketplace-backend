@@ -1,0 +1,64 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "paths": {
+      "@app/common": [
+        "libs/common/src"
+      ],
+      "@app/common/*": [
+        "libs/common/src/*"
+      ],
+      "@app/domain": [
+        "libs/domain/src"
+      ],
+      "@app/domain/*": [
+        "libs/domain/src/*"
+      ],
+      "@app/config": [
+        "libs/config/src"
+      ],
+      "@app/config/*": [
+        "libs/config/src/*"
+      ],
+      "@app/contracts": [
+        "libs/contracts/src"
+      ],
+      "@app/contracts/*": [
+        "libs/contracts/src/*"
+      ],
+      "@app/fslog": [
+        "libs/fslog/src"
+      ],
+      "@app/fslog/*": [
+        "libs/fslog/src/*"
+      ],
+      "@app/blockchain": [
+        "libs/blockchain/src"
+      ],
+      "@app/blockchain/*": [
+        "libs/blockchain/src/*"
+      ]
+    }
+  },
+  "ts-node": {
+    "transpileOnly": true
+  }
+}

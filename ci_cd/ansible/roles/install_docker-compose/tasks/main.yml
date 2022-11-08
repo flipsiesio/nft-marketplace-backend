@@ -1,0 +1,73 @@
+---
+# tasks file for install_docker-compose
+
+- name: "Set facts"
+  package_facts:
+    manager: "auto"
+  when: ( ansible_facts['distribution'] == "Amazon" or
+          ansible_facts['distribution'] == "CentOS" )
+
+- name: Update all packages
+  yum:
+    name: '*'
+    state: latest
+    update_only: yes
+  when: ( ansible_facts['distribution'] == "Amazon" or
+          ansible_facts['distribution'] == "CentOS" )
+
+
+- name: Ensure a list of yum packages are installed
+  yum:
+    name: python-pip
+    state: latest
+    update_cache: yes
+  when:
+    - ( ansible_facts['distribution'] == "CentOS" or
+        ansible_facts['distribution'] == "Amazon" )
+
+- name: Ensure Python pip packages are installed
+  pip:
+    name: docker-compose
+    # executable: /bin/pip3
+  when:
+    - ( ansible_facts['distribution'] == "CentOS" or
+        ansible_facts['distribution'] == "Amazon" )
+
+
+- name: Update apt cache
+  apt: update_cache=yes cache_valid_time=3600
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+
+- name: Upgrade all apt packages
+  apt: upgrade=dist
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+
+- name: install python3-pip
+  apt:
+    name: python3-pip
+    state: present
+    update_cache: yes
+  when:
+    - ( ansible_facts['distribution'] == "Ubuntu" or
+         ansible_facts['distribution'] == "Debian" )
+
+
+- name: python docker / docker-compse module
+  pip:
+    name:
+        - docker
+        - docker-compose
+
+
+- name: Download docker-compose {{ docker_compose_version }}
+  get_url:
+    url : https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+    dest: ~/docker-compose
+    mode: '+x'
+
+- name: Move docker-compose to /usr/local/bin/docker-compose
+  command: mv ~/docker-compose /usr/local/bin/docker-compose

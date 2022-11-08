@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+
+  auth-service:
+    container_name: ${AUTH_SERVICE_CONTAINER_NAME}
+    image: node:18-alpine
+    tty: true
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+    command: yarn run start:dev ${AUTH_SERVICE_CONTAINER_NAME}
+    working_dir: /app
+    restart: always
+    ports:
+      - ${AUTH_SERVICE_HTTP_PORT}:${AUTH_SERVICE_HTTP_PORT}
+    env_file:
+      - .env.develop
+
+  redis:
+    container_name: redis-pocker
+    image: redis
+    volumes:
+      - redis:/data
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+
+  postgres:
+    image: postgres:13-alpine
+    restart: always
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql:rw,z
+    expose:
+      - 5432
+    ports:
+      - '${POSTGRES_PORT}:5432'
+    environment:
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_EXTERNAL_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+  
+  mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - 17017:27017
+    volumes:
+      - mongodb_data_container:/data/db
+
+volumes:
+  redis:
+  mongodb_data_container:
